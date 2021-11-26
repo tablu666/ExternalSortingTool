@@ -33,4 +33,9 @@ public class Record implements Comparable<Record> {
     public int compareTo(Record o) {
         return Double.compare(this.getKey(), o.getKey());
     }
+
+    @Override
+    public String toString() {
+        return getId() + " " + getKey();
+    }
 }

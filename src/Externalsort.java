@@ -1,6 +1,8 @@
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -71,6 +73,7 @@ public class Externalsort {
             }
             MinHeap<Record> minHeap = new MinHeap<>(records);
 
+            // replacement selection
             byte[] inputBuffer = new byte[BLOCK_SIZE];
             byte[] outputBuffer = new byte[BLOCK_SIZE];
             FileOutputStream fos = new FileOutputStream("RunFile.bin");
@@ -79,8 +82,27 @@ public class Externalsort {
                     runInfoList, fos, numOfBytes);
             Operator.replacementSelection(minHeap, outputBuffer, runInfoList, fos, outPos);
             fos.close();
+            file.close();
 
+            // eight way merge
+            String runFileName = Operator.multiWayMerge(runInfoList, outputBuffer);
 
+            // copy to file
+            FileChannel src = new FileInputStream(runFileName).getChannel();
+            FileChannel dest = new FileOutputStream(args[0]).getChannel();
+            dest.transferFrom(src, 0, src.size());
+            src.close();
+            dest.close();
+
+            // standard output
+            file = new RandomAccessFile(args[0], "rw");
+            for (int i = 0, cnt = 0; i < file.length(); i += BLOCK_SIZE, cnt++) {
+                FileHelper.readBlock(file, i, inputBuffer);
+                byte[] temp = new byte[RECORD_SIZE];
+                System.arraycopy(inputBuffer, 0, temp, 0, RECORD_SIZE);
+                if (cnt % 5 == 0) System.out.println();
+                System.out.print(new Record(temp));
+            }
             file.close();
         } catch (IOException e) {
             e.printStackTrace();
