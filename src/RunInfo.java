@@ -7,9 +7,9 @@
 public class RunInfo {
 
     private long start;
-    private byte length;
+    private long length;
 
-    public RunInfo(long start, byte length) {
+    public RunInfo(long start, long length) {
         this.start = start;
         this.length = length;
     }
@@ -18,7 +18,15 @@ public class RunInfo {
         return start;
     }
 
-    public byte getLength() {
+    public void setStart(long start) {
+        this.start = start;
+    }
+
+    public long getLength() {
         return length;
+    }
+
+    public void setLength(long length) {
+        this.length = length;
     }
 }

@@ -10,6 +10,10 @@ public class MinHeap<T extends Comparable<? super T>> {
 
     public MinHeap(T[] data) {
         this.data = data;
+        heapify();
+    }
+
+    public void heapify() {
         for (int i = data.length / 2 - 1; i >= 0; i--) {
             sift(i);
         }
@@ -64,4 +68,7 @@ public class MinHeap<T extends Comparable<? super T>> {
         }
     }
 
+    public T[] getData() {
+        return data;
+    }
 }

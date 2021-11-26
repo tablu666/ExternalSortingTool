@@ -25,6 +25,10 @@ public class Record implements Comparable<Record> {
         return bb.getDouble();
     }
 
+    public byte[] getData() {
+        return data;
+    }
+
     @Override
     public int compareTo(Record o) {
         return Double.compare(this.getKey(), o.getKey());

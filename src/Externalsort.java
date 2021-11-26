@@ -1,6 +1,8 @@
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * The class containing the main method, the entry point of the application. It
@@ -72,12 +74,10 @@ public class Externalsort {
             byte[] inputBuffer = new byte[BLOCK_SIZE];
             byte[] outputBuffer = new byte[BLOCK_SIZE];
             FileOutputStream fos = new FileOutputStream("RunFile.bin");
-            for (int i = numOfBytes; i < file.length(); i += BLOCK_SIZE) {
-                FileHelper.readBlock(file, i, inputBuffer);
-                Operator.replacementSelection(minHeap, inputBuffer, outputBuffer, fos);
-            }
-            minHeap.sort();
-            Operator.replacementSelection(minHeap, outputBuffer, fos);
+            List<RunInfo> runInfoList = new ArrayList<>();
+            int outPos = Operator.replacementSelection(file, minHeap, inputBuffer, outputBuffer,
+                    runInfoList, fos, numOfBytes);
+            Operator.replacementSelection(minHeap, outputBuffer, runInfoList, fos, outPos);
             fos.close();
 
 
