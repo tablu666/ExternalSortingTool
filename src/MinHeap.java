@@ -15,14 +15,14 @@ public class MinHeap<T extends Comparable<? super T>> {
 
     public void heapify() {
         for (int i = data.length / 2 - 1; i >= 0; i--) {
-            sift(i);
+            sift(i, data.length);
         }
     }
 
-    public void sift(int i) {
-        while ((2 * i + 1) < data.length) {
+    public void sift(int i, int n) {
+        while ((2 * i + 1) < n) {
             int j = 2 * i + 1;
-            if (j + 1 < data.length && data[j + 1].compareTo(data[j]) < 0) {
+            if (j + 1 < n && data[j + 1].compareTo(data[j]) < 0) {
                 j = j + 1;
             }
 
