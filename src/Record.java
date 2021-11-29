@@ -15,14 +15,11 @@ public class Record implements Comparable<Record> {
     }
 
     public long getId() {
-        ByteBuffer bb = ByteBuffer.wrap(data);
-        return bb.getLong();
+        return ByteBuffer.wrap(data).getLong();
     }
 
     public double getKey() {
-        ByteBuffer bb = ByteBuffer.wrap(data);
-        bb.getLong();
-        return bb.getDouble();
+        return ByteBuffer.wrap(data).getDouble(8);
     }
 
     public byte[] getData() {

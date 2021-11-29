@@ -38,8 +38,8 @@ public class IOHelper {
         return records;
     }
 
-    private static Record readRecord(RandomAccessFile file, long filePos) throws IOException {
-        byte [] data = new byte [RECORD_SIZE];
+    public static Record readRecord(RandomAccessFile file, long filePos) throws IOException {
+        byte[] data = new byte[RECORD_SIZE];
         file.seek(filePos);
         file.read(data, 0, RECORD_SIZE);
         return new Record(data);
@@ -47,10 +47,42 @@ public class IOHelper {
 
     public static void standOutput(RandomAccessFile file) throws IOException {
         // standard output
-        for (int filePos = 0, cnt = 0; filePos < file.length(); filePos += BLOCK_SIZE, cnt++) {
+        for (int filePos = 0, cnt = 1; filePos < file.length(); filePos += BLOCK_SIZE, cnt++) {
             Record record = readRecord(file, filePos);
-            if (cnt % 5 == 0) System.out.println();
-            System.out.print(record + " ");
+            System.out.print(record);
+            if (cnt % 5 == 0) {
+                System.out.println();
+            } else if (filePos < file.length() - BLOCK_SIZE) {
+                System.out.print(" ");
+            }
         }
     }
+
+    public static void copyToFile(RandomAccessFile mergeFile, RandomAccessFile file) throws IOException {
+        mergeFile.seek(0);
+        file.seek(0);
+
+        // write merge data to file repeatedly - 1 block a time
+        while (mergeFile.getFilePointer() != mergeFile.length()) {
+            byte[] data = new byte[BLOCK_SIZE];
+            mergeFile.read(data);
+            file.write(data);
+        }
+    }
+
+    // read full block of records from current run - i
+    public static void readBlockOfRecords(RandomAccessFile runFile, RunInfo runInfo, int recordIdx, int i,
+                                          Record[] heapRecords, long[] runFileIndices) throws IOException {
+        long runEnd = runInfo.getStart() + runInfo.getLength();
+        int numOfRecord = BLOCK_SIZE / RECORD_SIZE;
+
+        // read a full-block records or the left
+        while (runFileIndices[i] < runEnd && recordIdx < (i + 1) * numOfRecord) {
+            heapRecords[recordIdx++] = readRecord(runFile, runFileIndices[i]);
+            runFileIndices[i] += RECORD_SIZE;
+        }
+
+//        System.out.println(runFileIndices[i]);
+    }
+
 }

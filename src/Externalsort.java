@@ -60,10 +60,10 @@ public class Externalsort {
 
     public static void main(String[] args) {
         try {
-//            RandomAccessFile file = new RandomAccessFile(args[0], "rw");
-            String[] input = {"test.bin", "256"};
-            GenFile.random(input);
-            RandomAccessFile file = new RandomAccessFile("test.bin", "rw");
+            RandomAccessFile file = new RandomAccessFile(args[0], "rw");
+//            String[] input = {"test.bin", "12"};
+//            GenFile.random(input);
+//            RandomAccessFile file = new RandomAccessFile("test.bin", "rw");
             System.out.println("original file length = " + file.length());
 
             int heapSize = IOHelper.HEAP_SIZE;
@@ -103,7 +103,7 @@ public class Externalsort {
                 System.out.println("run file len = " + runFile.length());
 
                 // 8-way merge
-                // TODO
+                opr.multiWayMerge(runFile, minHeap.getData(), runInfoList);
             }
 
 
@@ -141,8 +141,7 @@ public class Externalsort {
 //            dest.close();
 
             // standard output
-//            file = new RandomAccessFile(args[0], "rw");
-//            IOHelper.standOutput(file);
+            IOHelper.standOutput(file);
             file.close();
         } catch (IOException e) {
             e.printStackTrace();
