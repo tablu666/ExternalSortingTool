@@ -20,8 +20,7 @@ public class Operator {
         this.file = file;
     }
 
-    public RandomAccessFile replacementSelection(MinHeap<Record> minHeap, int start,
-                                                 List<RunInfo> runInfoList) throws IOException {
+    public RandomAccessFile replacementSelection(List<RunInfo> runInfoList, MinHeap<Record> minHeap, int start) throws IOException {
         RandomAccessFile runFile = new RandomAccessFile(IOHelper.RUN_FILE, "rw");
         int blockSize = IOHelper.BLOCK_SIZE;
         int recordSize = IOHelper.RECORD_SIZE;
@@ -29,125 +28,107 @@ public class Operator {
         Record[] inputBuffer;
         Record[] outputBuffer = new Record[numOfRecord];
 
-        Record[] heapData = minHeap.getData();
-        int heapSize = heapData.length;
         long runStart = 0;
         long runLength = 0;
+        int inputIdx = 0;
         int outputIdx = 0;
+        int hiddenNum = 0;
 
-        // traverse file
-        for (long filePos = start; filePos < file.length(); filePos += blockSize) {
-            // read 1 block (512) record from file to input buffer
-            inputBuffer = IOHelper.readRecords(file, filePos, numOfRecord);
+//        file.seek(start);
+        // read 1 block (512) record from file to input buffer
+        inputBuffer = IOHelper.readRecords(file, start, numOfRecord);
 
-            // read record from input buffer 1 by 1
-            for (int inputIdx = 0; inputIdx < inputBuffer.length; ) {
+        while (minHeap.heapSize() > 0) {
+            // begin a new run
+            System.out.println("begin a new run");
+
+            while (minHeap.heapSize() > 0) {
+                System.out.println("run info size = " + runInfoList.size());
+//                if (heapSize == 1) {
+//                    int a = 0;
+//                }
+                runLength += recordSize;
+
                 // check output buffer is full
                 if (outputIdx == numOfRecord) {
                     IOHelper.write(runFile, numOfRecord, outputBuffer);
                     outputIdx = 0;
-                    runLength += blockSize;
                 }
 
-                // check heap size is 0 (a run)
-                if (heapSize == 0) {
-                    // check remaining record in output buffer of current run
-                    if (outputIdx > 0) {
-                        IOHelper.write(runFile, outputIdx, outputBuffer);
-                        runLength += outputIdx * recordSize;
-                        outputIdx = 0;
-                    }
+                // read 1 block (512) record from file to input buffer
+                if (inputIdx == numOfRecord && file.getFilePointer() < file.length()) {
+                    inputBuffer = IOHelper.readRecords(file, file.getFilePointer(), numOfRecord);
+                    inputIdx = 0;
+                }
 
-                    minHeap.heapify();
-                    heapData = minHeap.getData();
-                    heapSize = heapData.length;
-                    runInfoList.add(new RunInfo(runStart, runLength));
-                    runStart += runLength;
-                    runLength = 0;
+                // input buffer has record
+                if (inputIdx < numOfRecord) {
+                    Record record = minHeap.getData()[0];
+                    outputBuffer[outputIdx++] = record;
+
+                    if (inputBuffer[inputIdx].compareTo(record) > 0) {
+                        minHeap.getData()[0] = inputBuffer[inputIdx++];
+                        minHeap.sift(0);
+                    } else {
+                        if (!minHeap.empty()) {
+                            minHeap.setHeapSize(minHeap.heapSize() - 1);
+                            // swap
+                            Record temp = minHeap.getData()[minHeap.heapSize()];
+                            minHeap.getData()[minHeap.heapSize()] = minHeap.getData()[0];
+                            minHeap.getData()[0] = temp;
+
+                            minHeap.getData()[minHeap.heapSize()] = inputBuffer[inputIdx++];
+                            minHeap.sift(0);
+                        }
+                        hiddenNum++;
+                    }
                 } else {
-                    // 0-index is min record
-                    minHeap.sift(0, heapSize);
-                    outputBuffer[outputIdx++] = heapData[0];
-                    Record prev = outputBuffer[outputIdx - 1];
-
-                    Record curr = inputBuffer[inputIdx++];
-                    heapData[0] = curr;
-                    if (curr.compareTo(prev) < 0) {
-                        // swap
-                        Record temp = heapData[heapSize - 1];
-                        heapData[heapSize - 1] = curr;
-                        heapData[0] = temp;
-                        heapSize--;
-                    }
+                    // output from heap for the current run
+                    outputBuffer[outputIdx++] = minHeap.removeMin();
                 }
             }
-        }
 
-        int remain = heapSize; // [0, 8 * 512]
-
-        // heap has remaining records from last run
-        while (heapSize > 0) {
-            // output buffer is full
-            if (outputIdx == numOfRecord) {
-                IOHelper.write(runFile, numOfRecord, outputBuffer);
-                outputIdx = 0;
-                runLength += blockSize;
-            } else {
-                minHeap.sift(0, heapSize);
-                outputBuffer[outputIdx++] = heapData[0];
-                // swap
-                if (heapSize > 1) {
-                    Record temp = heapData[heapSize - 1];
-                    heapData[heapSize - 1] = heapData[0];
-                    heapData[0] = temp;
-                }
-                heapSize--;
-            }
-        }
-
-        // update run info
-        if (remain > 0) {
+            // check remaining record in output buffer of current run
             if (outputIdx > 0) {
                 IOHelper.write(runFile, outputIdx, outputBuffer);
-                runLength += outputIdx * recordSize;
                 outputIdx = 0;
             }
+
+            // update run info
             runInfoList.add(new RunInfo(runStart, runLength));
+
+            // heapify the heap - hiddenNum [1, 512 * 8]
+            if (hiddenNum > 0) {
+                int total = minHeap.capacity();
+                System.out.println("total=" + total + " hidden num=" + hiddenNum);
+                // move to front
+                for (int i = total - hiddenNum, j = 0; i < total; i++, j++) {
+                    minHeap.getData()[j] = minHeap.getData()[i];
+                }
+                minHeap.setHeapSize(hiddenNum);
+                minHeap.buildHeap();
+            }
+
             runStart += runLength;
             runLength = 0;
-        }
-
-        // heap has another run to do
-        if (remain < 8 * numOfRecord) {
-            // new run
-            Record[] newRecords = new Record[8 * numOfRecord - remain];
-            System.arraycopy(minHeap.getData(), remain, newRecords, 0, newRecords.length);
-            minHeap = new MinHeap<>(newRecords);
-            minHeap.sort();
-            for (int k = 0; k < minHeap.getData().length; k++) {
-                // output buffer is full
-                if (outputIdx == numOfRecord) {
-                    IOHelper.write(runFile, numOfRecord, outputBuffer);
-                    outputIdx = 0;
-                    runLength += blockSize;
-                }
-                outputBuffer[outputIdx++] = minHeap.getData()[k];
-            }
-            if (outputIdx > 0) {
-                IOHelper.write(runFile, outputIdx, outputBuffer);
-                runLength += outputIdx * recordSize;
-            }
-            runInfoList.add(new RunInfo(runStart, runLength));
+            hiddenNum = 0;
         }
 
         return runFile;
     }
 
-
     public void multiWayMerge(RandomAccessFile runFile, Record[] blocks, List<RunInfo> runInfoList) throws IOException {
         mergeFile = new RandomAccessFile(IOHelper.MERGE_FILE, "rw");
         List<RunInfo> mergeInfoList = runInfoList;
 
+        // only 1 run
+        if (runInfoList.size() == 1) {
+            mergeToFile(runFile, blocks, mergeInfoList);
+            IOHelper.copyToFile(mergeFile, file);
+            return;
+        }
+
+        // many runs
         while (true) {
             System.out.println("run number = " + mergeInfoList.size());
             if (mergeInfoList.size() == 1) {
@@ -279,17 +260,5 @@ public class Operator {
 
         return new Record(bb.array());
     }
-
-
-
-
-
-
-
-
-
-
-
-
 
 }

@@ -58,7 +58,7 @@ public class Externalsort {
 
     public static void main(String[] args) {
         try {
-//            RandomAccessFile file = new RandomAccessFile(args[0], "rw");
+            RandomAccessFile file = new RandomAccessFile(args[0], "rw");
 //            for (int i = 0; i < file.length(); i += 16) {
 //                byte[] record = new byte[16];
 //                file.seek(i);
@@ -69,10 +69,10 @@ public class Externalsort {
 //                System.out.println(id + " " + key);
 //            }
 
-            String[] input = {"test1.bin", "1000"};
             long l = System.currentTimeMillis();
-            GenFile.reversed(input);
-            RandomAccessFile file = new RandomAccessFile("test1.bin", "rw");
+//            String[] input = {"test1.bin", "1000"};
+//            GenFile.reversed(input);
+//            RandomAccessFile file = new RandomAccessFile("test1.bin", "rw");
             System.out.println("original file length = " + file.length());
 //            for (int i = 0; i < file.length(); i += 16) {
 //                byte[] record = new byte[16];
@@ -90,43 +90,24 @@ public class Externalsort {
                 heapSize = Math.min(heapSize, (int) file.length());
                 int numOfRecord = heapSize / recordSize;
                 Record[] records = IOHelper.readRecords(file, 0, numOfRecord);
-                MinHeap<Record> minHeap = new MinHeap<>(records);
+                MaxHeap<Record> maxHeap = new MaxHeap<>(records);
 
                 // directly output from heap
-                IOHelper.sortAndOutput(file, minHeap);
+                IOHelper.sortAndOutput(file, maxHeap);
                 System.out.println("curr file length = " + file.length());
             } else {
                 Operator opr = new Operator(file);
 
                 // replacement selection
                 int numOfRecord = heapSize / recordSize;
-                MinHeap<Record> minHeap = new MinHeap<>(IOHelper.readRecords(file, 0, numOfRecord));
+                Record[] records = IOHelper.readRecords(file, 0, numOfRecord);
+//                System.out.println("numOfRecord=" + numOfRecord + " heapSize=" + heapSize);
+                MinHeap<Record> minHeap = new MinHeap<>(records, numOfRecord, numOfRecord);
                 List<RunInfo> runInfoList = new ArrayList<>();
-                RandomAccessFile runFile = opr.replacementSelection(minHeap, heapSize, runInfoList);
+                RandomAccessFile runFile = opr.replacementSelection(runInfoList, minHeap, heapSize);
                 System.out.println("run file len = " + runFile.length());
 
-
-//                IOHelper.standOutput(runFile);
-//                for (int i = 0; i < runFile.length(); i += 16) {
-//                    byte[] record = new byte[16];
-//                    runFile.seek(i);
-//                    runFile.read(record);
-//                    ByteBuffer bb = ByteBuffer.wrap(record);
-//                    Long id = bb.getLong();
-//                    Double key = bb.getDouble();
-//                    System.out.println(id + " " + key);
-//                }
-
-
-
-                // only 1 run - sort and output
-                if (runInfoList.size() == 1) {
-                    // directly output from heap
-                    IOHelper.sortAndOutput(file, minHeap);
-                } else {
-                    // 8-way merge
-                    opr.multiWayMerge(runFile, minHeap.getData(), runInfoList);
-                }
+                opr.multiWayMerge(runFile, minHeap.getData(), runInfoList);
             }
 
             // standard output

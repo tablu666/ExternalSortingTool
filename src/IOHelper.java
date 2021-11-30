@@ -99,10 +99,10 @@ public class IOHelper {
         }
     }
 
-    public static void sortAndOutput(RandomAccessFile file, MinHeap<Record> minHeap) throws IOException {
+    public static void sortAndOutput(RandomAccessFile file, MaxHeap<Record> maxHeap) throws IOException {
         // directly output from heap
-        minHeap.sort();
-        Record[] records = minHeap.getData();
+        maxHeap.sort();
+        Record[] records = maxHeap.getData();
         file.seek(0);
 
         for (Record record : records) {
