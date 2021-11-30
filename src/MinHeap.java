@@ -79,17 +79,20 @@ public class MinHeap<T extends Comparable<? super T>> {
     }
 
     public void sift(int pos) {
-        assert (pos >= 0) && (pos < n) : "Illegal heap position";
-        while (!isLeaf(pos)) {
-            int j = leftChild(pos);
-            if ((j < (n - 1)) && (data[j].compareTo(data[j + 1]) > 0))
-                j++; // j is now index of child with greater value
-            if (data[pos].compareTo(data[j]) <= 0)
-                return;
-            T temp = data[pos];
-            data[pos] = data[j];
-            data[j] = temp;
-            pos = j;  // Move down
+        if (pos >= 0 && pos < n) { // legal heap position
+            while (!isLeaf(pos)) {
+                int j = leftChild(pos);
+                if ((j < (n - 1)) && (data[j].compareTo(data[j + 1]) > 0)) {
+                    j++; // j is now index of child with greater value
+                }
+                if (data[pos].compareTo(data[j]) <= 0) {
+                    return;
+                }
+                T temp = data[pos];
+                data[pos] = data[j];
+                data[j] = temp;
+                pos = j; // Move down
+            }
         }
     }
 

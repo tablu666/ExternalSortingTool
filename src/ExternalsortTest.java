@@ -13,9 +13,9 @@ public class ExternalsortTest extends TestCase {
 
     public void testMain() {
         try {
-            String[] input = {"test.bin", "1"};
+            String[] input = {"extest.bin", "1"};
             reversed(input);
-            RandomAccessFile file = new RandomAccessFile("test.bin", "rw");
+            RandomAccessFile file = new RandomAccessFile("extest.bin", "rw");
             Externalsort.main(input);
             assertTrue(systemOut().getHistory().contains("0.0"));
             file.close();

@@ -59,6 +59,10 @@ public class Externalsort {
     public static void main(String[] args) {
         try {
             RandomAccessFile file = new RandomAccessFile(args[0], "rw");
+//            String[] input = {"test.bin", "24"};
+//            GenFile.reversed(input);
+//            RandomAccessFile file = new RandomAccessFile("test.bin", "rw");
+//            System.out.println("original file length = " + file.length());
 
             int heapSize = IOHelper.HEAP_SIZE;
             int recordSize = IOHelper.RECORD_SIZE;

@@ -33,6 +33,9 @@ public class Record implements Comparable<Record> {
 
     @Override
     public String toString() {
-        return getId() + " " + getKey();
+        ByteBuffer bb = ByteBuffer.wrap(data);
+        long id = bb.getLong();
+        double key = bb.getDouble();
+        return id + " " + key;
     }
 }

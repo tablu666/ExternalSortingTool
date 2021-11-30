@@ -36,15 +36,16 @@ public class IOHelper {
     public static Record readRecord(RandomAccessFile file, long filePos) throws IOException {
         byte[] data = new byte[RECORD_SIZE];
         file.seek(filePos);
-        file.read(data);
+        file.read(data, 0, RECORD_SIZE);
         return new Record(data);
     }
 
     public static void standOutput(RandomAccessFile file) throws IOException {
-        // standard output
+        // standard output from start
+        file.seek(0);
         for (int filePos = 0, cnt = 1; filePos < file.length(); filePos += BLOCK_SIZE, cnt++) {
             Record record = readRecord(file, filePos);
-            System.out.print(record);
+            System.out.print(record.toString());
             if (cnt % 5 == 0) {
                 System.out.println();
             } else if (filePos < file.length() - BLOCK_SIZE) {
