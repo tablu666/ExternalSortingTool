@@ -34,19 +34,13 @@ public class Operator {
         int outputIdx = 0;
         int hiddenNum = 0;
 
-//        file.seek(start);
         // read 1 block (512) record from file to input buffer
         inputBuffer = IOHelper.readRecords(file, start, numOfRecord);
 
         while (minHeap.heapSize() > 0) {
-            // begin a new run
-            System.out.println("begin a new run");
 
+            // begin a new run
             while (minHeap.heapSize() > 0) {
-                System.out.println("run info size = " + runInfoList.size());
-//                if (heapSize == 1) {
-//                    int a = 0;
-//                }
                 runLength += recordSize;
 
                 // check output buffer is full
@@ -100,7 +94,6 @@ public class Operator {
             // heapify the heap - hiddenNum [1, 512 * 8]
             if (hiddenNum > 0) {
                 int total = minHeap.capacity();
-                System.out.println("total=" + total + " hidden num=" + hiddenNum);
                 // move to front
                 for (int i = total - hiddenNum, j = 0; i < total; i++, j++) {
                     minHeap.getData()[j] = minHeap.getData()[i];
@@ -130,20 +123,13 @@ public class Operator {
 
         // many runs
         while (true) {
-            System.out.println("run number = " + mergeInfoList.size());
             if (mergeInfoList.size() == 1) {
                 IOHelper.copyToFile(mergeFile, file);
-//                IOHelper.standOutput(mergeFile);
                 break;
             } else {
-                System.out.println("begin merge");
                 mergeInfoList = mergeToFile(runFile, blocks, mergeInfoList);
                 // swap
                 IOHelper.copyToFile(mergeFile, runFile);
-//                RandomAccessFile temp = runFile;
-//                runFile = mergeFile;
-//                mergeFile = temp;
-
                 runFile.seek(0);
                 mergeFile.seek(0);
             }
@@ -163,14 +149,12 @@ public class Operator {
 
         // traverse run list
         while (runInfoList.size() > 0) {
-            System.out.println("traverse run info list");
 
             int runNum = IOHelper.readBlockOfRecords(runFile, runInfoList,
                     heapRecords, runEndIndices, 0);
 
             int runDoneNum = 0;
             int minRun = 0;
-
 
             // init 8 or less readDone flag
             boolean[] runDone = new boolean[runNum];
@@ -180,7 +164,6 @@ public class Operator {
             // init 8 or less indices for the 8-block-size run heap memory
             for (int i = 0; i < runNum; i++) {
                 recordIndices[i] = numOfRecord * i;
-                System.out.println("i=" + i + " recordIdx=" + recordIndices[i]);
             }
 
             // merge current 8 blocks respectively

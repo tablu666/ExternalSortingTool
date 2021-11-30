@@ -59,30 +59,10 @@ public class Externalsort {
     public static void main(String[] args) {
         try {
             RandomAccessFile file = new RandomAccessFile(args[0], "rw");
-//            for (int i = 0; i < file.length(); i += 16) {
-//                byte[] record = new byte[16];
-//                file.seek(i);
-//                file.read(record);
-//                ByteBuffer bb = ByteBuffer.wrap(record);
-//                Long id = bb.getLong();
-//                Double key = bb.getDouble();
-//                System.out.println(id + " " + key);
-//            }
 
-            long l = System.currentTimeMillis();
 //            String[] input = {"test1.bin", "1000"};
 //            GenFile.reversed(input);
 //            RandomAccessFile file = new RandomAccessFile("test1.bin", "rw");
-            System.out.println("original file length = " + file.length());
-//            for (int i = 0; i < file.length(); i += 16) {
-//                byte[] record = new byte[16];
-//                file.seek(i);
-//                file.read(record);
-//                ByteBuffer bb = ByteBuffer.wrap(record);
-//                Long id = bb.getLong();
-//                Double key = bb.getDouble();
-//                System.out.println(id + " " + key);
-//            }
 
             int heapSize = IOHelper.HEAP_SIZE;
             int recordSize = IOHelper.RECORD_SIZE;
@@ -101,20 +81,18 @@ public class Externalsort {
                 // replacement selection
                 int numOfRecord = heapSize / recordSize;
                 Record[] records = IOHelper.readRecords(file, 0, numOfRecord);
-//                System.out.println("numOfRecord=" + numOfRecord + " heapSize=" + heapSize);
                 MinHeap<Record> minHeap = new MinHeap<>(records, numOfRecord, numOfRecord);
                 List<RunInfo> runInfoList = new ArrayList<>();
                 RandomAccessFile runFile = opr.replacementSelection(runInfoList, minHeap, heapSize);
-                System.out.println("run file len = " + runFile.length());
 
+                // 8-way merge
                 opr.multiWayMerge(runFile, minHeap.getData(), runInfoList);
             }
 
             // standard output
             IOHelper.standOutput(file);
             file.close();
-            long l1 = System.currentTimeMillis();
-            System.out.println("time = " + (l1 - l) / 1000);
+
         } catch (IOException e) {
             e.printStackTrace();
         }
