@@ -42,7 +42,7 @@ public class IOHelperTest extends TestCase {
             Record[] records = {record};
             IOHelper.write(file, 1, records);
             Record r = IOHelper.readRecord(file, 0);
-            assertTrue(record.toString().equals(r.toString()));
+            assertEquals(record.toString(), r.toString());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -63,7 +63,7 @@ public class IOHelperTest extends TestCase {
             Record[] records = {record};
             IOHelper.write(file, 1, records);
             Record r = IOHelper.readRecord(file, 0);
-            assertTrue(record.toString().equals(r.toString()));
+            assertEquals(record.toString(), r.toString());
         } catch (IOException e) {
             e.printStackTrace();
         }
