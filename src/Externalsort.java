@@ -2,6 +2,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,16 +56,33 @@ import java.util.List;
 // letter of this restriction.
 public class Externalsort {
 
-    public static final int BLOCK_SIZE = 8192;
-    public static final int RECORD_SIZE = 16;
-
     public static void main(String[] args) {
         try {
-            RandomAccessFile file = new RandomAccessFile(args[0], "rw");
-//            String[] input = {"test.bin", "12"};
-//            GenFile.random(input);
-//            RandomAccessFile file = new RandomAccessFile("test.bin", "rw");
+//            RandomAccessFile file = new RandomAccessFile(args[0], "rw");
+//            for (int i = 0; i < file.length(); i += 16) {
+//                byte[] record = new byte[16];
+//                file.seek(i);
+//                file.read(record);
+//                ByteBuffer bb = ByteBuffer.wrap(record);
+//                Long id = bb.getLong();
+//                Double key = bb.getDouble();
+//                System.out.println(id + " " + key);
+//            }
+
+            String[] input = {"test1.bin", "1000"};
+            long l = System.currentTimeMillis();
+            GenFile.reversed(input);
+            RandomAccessFile file = new RandomAccessFile("test1.bin", "rw");
             System.out.println("original file length = " + file.length());
+//            for (int i = 0; i < file.length(); i += 16) {
+//                byte[] record = new byte[16];
+//                file.seek(i);
+//                file.read(record);
+//                ByteBuffer bb = ByteBuffer.wrap(record);
+//                Long id = bb.getLong();
+//                Double key = bb.getDouble();
+//                System.out.println(id + " " + key);
+//            }
 
             int heapSize = IOHelper.HEAP_SIZE;
             int recordSize = IOHelper.RECORD_SIZE;
@@ -75,74 +93,47 @@ public class Externalsort {
                 MinHeap<Record> minHeap = new MinHeap<>(records);
 
                 // directly output from heap
-                minHeap.sort();
-                int outputIdx = 0;
-                RandomAccessFile runFile = new RandomAccessFile(IOHelper.RUN_FILE, "rw");
-                Record[] outputBuffer = new Record[Math.min(numOfRecord, IOHelper.BLOCK_SIZE / recordSize)];
-
-                for (int k = 0; k < minHeap.getData().length; k++) {
-                    // output buffer is full
-                    if (outputIdx == numOfRecord) {
-                        IOHelper.write(runFile, numOfRecord, outputBuffer);
-                        outputIdx = 0;
-                    }
-                    outputBuffer[outputIdx++] = minHeap.getData()[k];
-                }
-                if (outputIdx > 0) {
-                    IOHelper.write(runFile, outputIdx, outputBuffer);
-                }
+                IOHelper.sortAndOutput(file, minHeap);
+                System.out.println("curr file length = " + file.length());
             } else {
-
                 Operator opr = new Operator(file);
 
                 // replacement selection
-                int numOfRecords = heapSize / recordSize;
-                MinHeap<Record> minHeap = new MinHeap<>(IOHelper.readRecords(file, 0, numOfRecords));
+                int numOfRecord = heapSize / recordSize;
+                MinHeap<Record> minHeap = new MinHeap<>(IOHelper.readRecords(file, 0, numOfRecord));
                 List<RunInfo> runInfoList = new ArrayList<>();
                 RandomAccessFile runFile = opr.replacementSelection(minHeap, heapSize, runInfoList);
                 System.out.println("run file len = " + runFile.length());
 
-                // 8-way merge
-                opr.multiWayMerge(runFile, minHeap.getData(), runInfoList);
+
+//                IOHelper.standOutput(runFile);
+//                for (int i = 0; i < runFile.length(); i += 16) {
+//                    byte[] record = new byte[16];
+//                    runFile.seek(i);
+//                    runFile.read(record);
+//                    ByteBuffer bb = ByteBuffer.wrap(record);
+//                    Long id = bb.getLong();
+//                    Double key = bb.getDouble();
+//                    System.out.println(id + " " + key);
+//                }
+
+
+
+                // only 1 run - sort and output
+                if (runInfoList.size() == 1) {
+                    // directly output from heap
+                    IOHelper.sortAndOutput(file, minHeap);
+                } else {
+                    // 8-way merge
+                    opr.multiWayMerge(runFile, minHeap.getData(), runInfoList);
+                }
             }
-
-
-            // read 8 blocks to build min heap
-//            byte[] heapData = new byte[8 * BLOCK_SIZE];
-//            int numOfBytes = IOHelper.readBlock(file, 0, heapData);
-//            Record[] records = new Record[numOfBytes / RECORD_SIZE];
-//            for (int k = 0, i = 0; i < numOfBytes; k++, i += RECORD_SIZE) {
-//                byte[] temp = new byte[RECORD_SIZE];
-//                System.arraycopy(heapData, i, temp, 0, RECORD_SIZE);
-//                records[k] = new Record(temp);
-//            }
-//            MinHeap<Record> minHeap = new MinHeap<>(records);
-
-            // replacement selection
-//            byte[] inputBuffer = new byte[BLOCK_SIZE];
-//            byte[] outputBuffer = new byte[BLOCK_SIZE];
-//            FileOutputStream fos = new FileOutputStream("RunFile.bin");
-//            List<RunInfo> runInfoList = new ArrayList<>();
-//            int outPos = Operator.replacementSelection(file, minHeap, inputBuffer, outputBuffer,
-//                    runInfoList, fos, numOfBytes);
-//            Operator.replacementSelection(minHeap, outputBuffer, outPos, runInfoList, fos);
-//            RandomAccessFile runFile = new RandomAccessFile("RunFile.bin", "rw");
-//            fos.close();
-//            file.close();
-
-            // eight way merge
-//            String runFileName = Operator.multiWayMerge(runInfoList, outputBuffer);
-//
-//            // copy to file
-//            FileChannel src = new FileInputStream(runFileName).getChannel();
-//            FileChannel dest = new FileOutputStream(args[0]).getChannel();
-//            dest.transferFrom(src, 0, src.size());
-//            src.close();
-//            dest.close();
 
             // standard output
             IOHelper.standOutput(file);
             file.close();
+            long l1 = System.currentTimeMillis();
+            System.out.println("time = " + (l1 - l) / 1000);
         } catch (IOException e) {
             e.printStackTrace();
         }

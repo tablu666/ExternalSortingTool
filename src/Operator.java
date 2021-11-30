@@ -1,7 +1,7 @@
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -149,17 +149,19 @@ public class Operator {
         List<RunInfo> mergeInfoList = runInfoList;
 
         while (true) {
+            System.out.println("run number = " + mergeInfoList.size());
             if (mergeInfoList.size() == 1) {
                 IOHelper.copyToFile(mergeFile, file);
+//                IOHelper.standOutput(mergeFile);
                 break;
             } else {
                 System.out.println("begin merge");
-                Arrays.fill(blocks, null);
                 mergeInfoList = mergeToFile(runFile, blocks, mergeInfoList);
                 // swap
-                RandomAccessFile temp = runFile;
-                runFile = mergeFile;
-                mergeFile = temp;
+                IOHelper.copyToFile(mergeFile, runFile);
+//                RandomAccessFile temp = runFile;
+//                runFile = mergeFile;
+//                mergeFile = temp;
 
                 runFile.seek(0);
                 mergeFile.seek(0);
@@ -173,125 +175,121 @@ public class Operator {
         int recordSize = IOHelper.RECORD_SIZE;
         int numOfRecord = blockSize / recordSize; // 512
         Record[] outputBuffer = new Record[numOfRecord];
-        int runInfoIdx = 0;
+        int[] runEndIndices = new int[8];
         int outputIdx = 0;
-        long runStart = 0;
         long runLength = 0;
+        long runStart = 0;
 
         // traverse run list
-        while (runInfoIdx < runInfoList.size()) {
+        while (runInfoList.size() > 0) {
             System.out.println("traverse run info list");
-            // run num ([1, 8])
-            int runNum = Math.min(8, runInfoList.size() - runInfoIdx);
+
+            int runNum = IOHelper.readBlockOfRecords(runFile, runInfoList,
+                    heapRecords, runEndIndices, 0);
+
+            int runDoneNum = 0;
+            int minRun = 0;
+
+
+            // init 8 or less readDone flag
+            boolean[] runDone = new boolean[runNum];
+
+            int[] recordIndices = new int[runNum];
 
             // init 8 or less indices for the 8-block-size run heap memory
-            int[] recordIndices = new int[runNum];
             for (int i = 0; i < runNum; i++) {
                 recordIndices[i] = numOfRecord * i;
                 System.out.println("i=" + i + " recordIdx=" + recordIndices[i]);
             }
 
-            // init 8 or less indices for run file
-            long[] runFileIndices = new long[runNum];
-            for (int i = 0; i < runNum; i++) {
-                runFileIndices[i] = runInfoList.get(runInfoIdx + i).getStart();
-            }
-
-            // initial reading from each run
-            for (int i = 0; i < runNum; i++) {
-                RunInfo runInfo = runInfoList.get(runInfoIdx + i);
-                int recordIdx = recordIndices[i];
-                IOHelper.readBlockOfRecords(runFile, runInfo, recordIdx, i, heapRecords, runFileIndices);
-            }
-
             // merge current 8 blocks respectively
-            while (!groupMergeOver(runFileIndices, runNum, heapRecords, runInfoList, runInfoIdx)) {
-//                System.out.println("merge 8 blocks");
-                // compare each run and find minimum record
-                Record min = null;
-                int minRun = -1;
-                for (int i = 0; i < runNum; i++) {
-                    RunInfo runInfo = runInfoList.get(runInfoIdx + i);
-                    long capacity = runInfo.getStart() + runInfo.getLength() - runFileIndices[i];
-                    if (readDone(capacity, i, heapRecords)) continue;
-
-                    // block is empty - reread from run file
-                    if (recordIndices[i] == (i + 1) * numOfRecord) {
-//                        System.out.println(recordIndices[i] + " i=" + i);
-                        recordIndices[i] = i * numOfRecord;
-                        IOHelper.readBlockOfRecords(runFile, runInfo, 0, i, heapRecords, runFileIndices);
-                    }
-
-                    Record curr = heapRecords[recordIndices[i]];
-                    // the last data from current run - not enough filling 1 block
-                    if (curr == null) {
-                        recordIndices[i] = i * numOfRecord;
-                        curr = heapRecords[recordIndices[i]];
-                        if (curr == null) continue;
-                    }
-                    if (min == null || curr.compareTo(min) < 0) {
-                        min = curr;
-                        minRun = i;
-                    }
-                }
+            while (runDoneNum < runNum) {
+                // update runLength
+                runLength += recordSize;
 
                 // write to merge file
                 if (outputIdx == numOfRecord) {
                     IOHelper.write(mergeFile, numOfRecord, outputBuffer);
                     outputIdx = 0;
-                    runLength += blockSize;
                 }
 
-                // put the minimum record to output buffer
-                if (min != null) {
-                    outputBuffer[outputIdx++] = min;
-                    heapRecords[recordIndices[minRun]] = null;
+                // compare each run and find minimum record
+                Record minRecord = getMaxRecord();
+                for (int i = 0; i < recordIndices.length; i++) {
+                    // skip done block
+                    if (runDone[i]) continue;
+                    Record curr = heapRecords[recordIndices[i]];
+                    if (curr.compareTo(minRecord) < 0) {
+                        minRun = i;
+                        minRecord = curr;
+                    }
+                }
+
+                outputBuffer[outputIdx++] = minRecord;
+
+                // check if current block index reaching end
+                if (recordIndices[minRun] == runEndIndices[minRun]) {
+                    // empty block
+                    if (runInfoList.get(minRun).getLength() == 0) {
+                        runDone[minRun] = true;
+                        runDoneNum++;
+                    } else {
+                        // continue to read from input
+                        IOHelper.readOneBlockOfRecords(runFile, runInfoList, heapRecords, runEndIndices, minRun);
+                        // back to start
+                        recordIndices[minRun] = minRun * numOfRecord;
+                    }
+                } else {
                     recordIndices[minRun]++;
                 }
             }
 
             if (outputIdx > 0) {
                 IOHelper.write(mergeFile, outputIdx, outputBuffer);
-                runLength += outputIdx * recordSize;
                 outputIdx = 0;
             }
 
+            // remove prev 8 runs
+            for (int i = 0; i < runNum; i++) {
+                runInfoList.remove(0);
+            }
+
+            // update merge run info list
             mergeInfoList.add(new RunInfo(runStart, runLength));
             runStart += runLength;
             runLength = 0;
-            runInfoIdx += runNum;
         }
 
         return mergeInfoList;
     }
 
-    // check current 8-blocks-group merge is over
-    private boolean groupMergeOver(long[] runFileIndices, int runNum, Record[] heapRecords,
-                                   List<RunInfo> runInfoList, int runInfoIdx) {
+    // set the key of current record to max
+    private Record getMaxRecord() {
+        int recordSize = IOHelper.RECORD_SIZE;
+        ByteBuffer bb = ByteBuffer.allocate(recordSize);
 
-        for (int i = 0; i < runNum; i++) {
-            RunInfo runInfo = runInfoList.get(runInfoIdx + i);
-            long capacity = runInfo.getStart() + runInfo.getLength() - runFileIndices[i];
+        // id
+        bb.putLong(0, 0);
 
-            if (!readDone(capacity, i, heapRecords)) {
-                return false;
-            }
-        }
+        // key
+        int keyPos = recordSize / 2;
+        bb.putDouble(keyPos, Double.POSITIVE_INFINITY);
 
-        System.out.println("true");
-        return true;
+        bb.rewind();
+
+        return new Record(bb.array());
     }
 
-    private boolean readDone(long capacity, int i, Record[] heapRecords) {
-        int numOfRecord = IOHelper.BLOCK_SIZE / IOHelper.RECORD_SIZE; // 512
 
-        for (int j = i * numOfRecord; j < (i + 1) * numOfRecord; j++) {
-            if (heapRecords[j] != null) {
-//                System.out.println("false i=" + i + " j=" + j);
-                return false;
-            }
-        }
 
-        return capacity == 0;
-    }
+
+
+
+
+
+
+
+
+
+
 }
