@@ -51,7 +51,7 @@ public class IOHelperTest extends TestCase {
     public void testReadRecords() {
         try {
             Record[] records = IOHelper.readRecords(file, 0, 1);
-            assertTrue(records.length == 1);
+            assertEquals(1, records.length);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -86,7 +86,7 @@ public class IOHelperTest extends TestCase {
             IOHelper.write(file, 1, records);
             RandomAccessFile newFile = new RandomAccessFile("io1.bin", "rw");
             IOHelper.copyToFile(file, newFile);
-            assertTrue(newFile.length() == 8192);
+            assertEquals(8192, newFile.length());
             newFile.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -99,7 +99,7 @@ public class IOHelperTest extends TestCase {
             Record[] heapRecords = new Record[1];
             int[] recordsEndIndices = new int[1];
             int i = IOHelper.readMultiBlocks(file, runInfoList, heapRecords, recordsEndIndices);
-            assertTrue(i == 0);
+            assertEquals(0, i);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -113,7 +113,7 @@ public class IOHelperTest extends TestCase {
             int[] recordsEndIndices = new int[8];
             int runInfoIdx = 0;
             IOHelper.readBlock(file, runInfoList, heapRecords, recordsEndIndices, runInfoIdx);
-            assertTrue(recordsEndIndices[0] == 511);
+            assertEquals(511, recordsEndIndices[0]);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -124,7 +124,7 @@ public class IOHelperTest extends TestCase {
             Record[] records = {record};
             MaxHeap<Record> maxHeap = new MaxHeap<>(records);
             IOHelper.sortAndOutput(file, maxHeap);
-            assertTrue(file.getFilePointer() == 16);
+            assertEquals(16, file.getFilePointer());
         } catch (IOException e) {
             e.printStackTrace();
         }

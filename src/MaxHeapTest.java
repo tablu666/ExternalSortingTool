@@ -2,6 +2,13 @@ import student.TestCase;
 
 import java.util.Arrays;
 
+/**
+ * The purpose of this class is to test
+ * the methods of class MaxHeap.
+ *
+ * @author Tianbo Lu & Yuechen Feng
+ * @version 2021-11-30
+ */
 public class MaxHeapTest extends TestCase {
 
     private MaxHeap<Integer> maxHeap;
