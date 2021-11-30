@@ -60,8 +60,8 @@ public class Externalsort {
         try {
             RandomAccessFile file = new RandomAccessFile(args[0], "rw");
 
-//            String[] input = {"test1.bin", "1000"};
-//            GenFile.reversed(input);
+//            String[] input = {"test1.bin", "7"};
+//            GenFile.random(input);
 //            RandomAccessFile file = new RandomAccessFile("test1.bin", "rw");
 
             int heapSize = IOHelper.HEAP_SIZE;
@@ -74,7 +74,6 @@ public class Externalsort {
 
                 // directly output from heap
                 IOHelper.sortAndOutput(file, maxHeap);
-                System.out.println("curr file length = " + file.length());
             } else {
                 Operator opr = new Operator(file);
 

@@ -1,4 +1,3 @@
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.List;
@@ -54,31 +53,34 @@ public class IOHelper {
         }
     }
 
-    public static void copyToFile(RandomAccessFile mergeFile, RandomAccessFile file) throws IOException {
-        mergeFile.seek(0);
-        file.seek(0);
+    // copy file a to b
+    public static void copyToFile(RandomAccessFile a, RandomAccessFile b) throws IOException {
+        a.seek(0);
+        b.seek(0);
 
-        // write merge data to file repeatedly - 1 block a time
-        while (mergeFile.getFilePointer() != mergeFile.length()) {
+        // write file a to b repeatedly - 1 block a time
+        while (a.getFilePointer() < a.length()) {
             byte[] data = new byte[BLOCK_SIZE];
-            mergeFile.read(data);
-            file.write(data);
+            a.read(data);
+            b.write(data);
         }
     }
 
-    // read full block of records from current run - i
-    public static int readBlockOfRecords(RandomAccessFile runFile, List<RunInfo> runInfoList,
-                                         Record[] heapRecords, int[] runEndIndices, int runInfoIdx) throws IOException {
-        while (runInfoIdx < runInfoList.size() && runInfoIdx < 8) {
-            readOneBlockOfRecords(runFile, runInfoList, heapRecords, runEndIndices, runInfoIdx);
-            runInfoIdx++;
+    // read multi blocks of records from multi runs [1, 8]
+    public static int readMultiBlocks(RandomAccessFile runFile, List<RunInfo> runInfoList,
+                                      Record[] heapRecords, int[] recordsEndIndices) throws IOException {
+        // maintain index of run info list [1, 8]
+        int i;
+        for (i = 0; i < Math.min(runInfoList.size(), 8); i++) {
+            readBlock(runFile, runInfoList, heapRecords, recordsEndIndices, i);
         }
 
-        return runInfoIdx;
+        return i;
     }
 
-    public static void readOneBlockOfRecords(RandomAccessFile runFile, List<RunInfo> runInfoList,
-                                             Record[] heapRecords, int[] runEndIndices, int runInfoIdx) throws IOException {
+    // read 1 block of records from current run
+    public static void readBlock(RandomAccessFile runFile, List<RunInfo> runInfoList,
+                                 Record[] heapRecords, int[] recordsEndIndices, int runInfoIdx) throws IOException {
         RunInfo runInfo = runInfoList.get(runInfoIdx);
         int numOfRecord = BLOCK_SIZE / RECORD_SIZE;
 
@@ -95,7 +97,7 @@ public class IOHelper {
             runInfo.setLength(runInfo.getLength() - RECORD_SIZE);
 
             // update the end index of current block within heap memory
-            runEndIndices[runInfoIdx] = i;
+            recordsEndIndices[runInfoIdx] = i;
         }
     }
 
@@ -106,7 +108,6 @@ public class IOHelper {
         file.seek(0);
 
         for (Record record : records) {
-//            System.out.println("out");
             byte[] data = record.getData();
             file.write(data);
         }
