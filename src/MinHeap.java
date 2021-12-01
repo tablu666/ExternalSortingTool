@@ -96,10 +96,6 @@ public class MinHeap<T extends Comparable<? super T>> {
         }
     }
 
-    public boolean empty() {
-        return n == 0;
-    }
-
     public int capacity() {
         return this.size;
     }

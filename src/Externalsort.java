@@ -1,10 +1,5 @@
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -59,7 +54,7 @@ public class Externalsort {
     public static void main(String[] args) {
         try {
             RandomAccessFile file = new RandomAccessFile(args[0], "rw");
-//            String[] input = {"test.bin", "24"};
+//            String[] input = {"test.bin", "500"};
 //            GenFile.reversed(input);
 //            RandomAccessFile file = new RandomAccessFile("test.bin", "rw");
 //            System.out.println("original file length = " + file.length());
@@ -73,19 +68,24 @@ public class Externalsort {
                 MaxHeap<Record> maxHeap = new MaxHeap<>(records);
 
                 // directly output from heap
-                IOHelper.sortAndOutput(file, maxHeap);
+                IOHelper.sortAndWrite(file, maxHeap);
             } else {
                 Operator opr = new Operator(file);
 
                 // replacement selection
-                int numOfRecord = heapSize / recordSize;
-                Record[] records = IOHelper.readRecords(file, 0, numOfRecord);
-                MinHeap<Record> minHeap = new MinHeap<>(records, numOfRecord, numOfRecord);
-                List<RunInfo> runInfoList = new ArrayList<>();
-                RandomAccessFile runFile = opr.replacementSelection(runInfoList, minHeap, heapSize);
-
+                List<RunInfo> runInfoList = opr.replacementSelection();
+                // get run file
+                RandomAccessFile runFile = new RandomAccessFile(IOHelper.RUN_FILE, "rw");
                 // 8-way merge
-                opr.multiWayMerge(runFile, minHeap.getData(), runInfoList);
+                opr.multiWayMerge(runFile, runInfoList);
+                // get merge file
+                RandomAccessFile mergeFile = new RandomAccessFile(IOHelper.MERGE_FILE, "rw");
+                // copy to input file
+                IOHelper.copyToFile(mergeFile, file);
+
+                // close stream
+                runFile.close();
+                mergeFile.close();
             }
 
             // standard output

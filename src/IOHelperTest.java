@@ -86,7 +86,7 @@ public class IOHelperTest extends TestCase {
             IOHelper.write(file, 1, records);
             RandomAccessFile newFile = new RandomAccessFile("io1.bin", "rw");
             IOHelper.copyToFile(file, newFile);
-            assertEquals(8192, newFile.length());
+            assertEquals(file.length(), newFile.length());
             newFile.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -123,7 +123,7 @@ public class IOHelperTest extends TestCase {
         try {
             Record[] records = {record};
             MaxHeap<Record> maxHeap = new MaxHeap<>(records);
-            IOHelper.sortAndOutput(file, maxHeap);
+            IOHelper.sortAndWrite(file, maxHeap);
             assertEquals(16, file.getFilePointer());
         } catch (IOException e) {
             e.printStackTrace();

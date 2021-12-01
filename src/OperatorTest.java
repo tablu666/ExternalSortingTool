@@ -15,9 +15,7 @@ public class OperatorTest extends TestCase {
 
     private Operator opr;
     private RandomAccessFile file;
-    private int heapSize = 65536;
-    private MinHeap<Record> minHeap;
-    private List<RunInfo> runInfoList;
+    private String runFileName;
 
     @Override
     public void setUp() throws Exception {
@@ -25,12 +23,7 @@ public class OperatorTest extends TestCase {
         reversed(input);
         this.file = new RandomAccessFile("opr.bin", "rw");
         this.opr = new Operator(file);
-
-        int recordSize = 16;
-        int numOfRecord = heapSize / recordSize;
-        Record[] records = IOHelper.readRecords(file, 0, numOfRecord);
-        this.minHeap = new MinHeap<>(records, numOfRecord, numOfRecord);
-        this.runInfoList = new ArrayList<>();
+        this.runFileName = IOHelper.RUN_FILE;
     }
 
     @Override
@@ -40,8 +33,8 @@ public class OperatorTest extends TestCase {
 
     public void testReplacementSelection() {
         try {
-            RandomAccessFile runFile = opr.replacementSelection(runInfoList, minHeap, heapSize);
-            assertTrue(runFile.length() > 0);
+            List<RunInfo> runInfoList = opr.replacementSelection();
+            assertTrue(runInfoList.size() > 0);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -49,8 +42,9 @@ public class OperatorTest extends TestCase {
 
     public void testMultiWayMerge() {
         try {
-            RandomAccessFile runFile = opr.replacementSelection(runInfoList, minHeap, heapSize);
-            opr.multiWayMerge(runFile, minHeap.getData(), runInfoList);
+            List<RunInfo> runInfoList = opr.replacementSelection();
+            RandomAccessFile runFile = new RandomAccessFile(runFileName, "rw");
+            opr.multiWayMerge(runFile, runInfoList);
             assertTrue(file.getFilePointer() > 0);
         } catch (IOException e) {
             e.printStackTrace();

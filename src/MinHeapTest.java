@@ -55,10 +55,6 @@ public class MinHeapTest extends TestCase {
         assertEquals(1, i);
     }
 
-    public void testEmpty() {
-        assertFalse(minHeap.empty());
-    }
-
     public void testCapacity() {
         assertEquals(5, minHeap.capacity());
     }

@@ -25,6 +25,14 @@ public class IOHelper {
     }
 
     // Reads data from the file and fill the input records
+    public static long readMultiRecords(RandomAccessFile file, long filePos, Record[] records) throws IOException {
+        for (int i = 0; i < records.length && file.getFilePointer() < file.length(); i++, filePos += RECORD_SIZE) {
+            records[i] = readRecord(file, filePos);
+        }
+        return filePos;
+    }
+
+    // Read num of record from file and return records
     public static Record[] readRecords(RandomAccessFile file, long filePos, int numOfRecord) throws IOException {
         Record[] records = new Record[numOfRecord];
         for (int i = 0; i < numOfRecord; i++, filePos += RECORD_SIZE) {
@@ -33,6 +41,7 @@ public class IOHelper {
         return records;
     }
 
+    // read a record from file
     public static Record readRecord(RandomAccessFile file, long filePos) throws IOException {
         byte[] data = new byte[RECORD_SIZE];
         file.seek(filePos);
@@ -40,15 +49,19 @@ public class IOHelper {
         return new Record(data);
     }
 
+    // standard output from start
     public static void standOutput(RandomAccessFile file) throws IOException {
-        // standard output from start
         file.seek(0);
         for (int filePos = 0, cnt = 1; filePos < file.length(); filePos += BLOCK_SIZE, cnt++) {
             Record record = readRecord(file, filePos);
             System.out.print(record.toString());
+            // the last block
+            if (filePos + BLOCK_SIZE == file.length()) break;
+            // next line every 5 blocks
             if (cnt % 5 == 0) {
                 System.out.println();
-            } else if (filePos < file.length() - BLOCK_SIZE) {
+            } else {
+                // line space
                 System.out.print(" ");
             }
         }
@@ -59,15 +72,16 @@ public class IOHelper {
         a.seek(0);
         b.seek(0);
 
-        // write file a to b repeatedly - 1 block a time
+        // write file a to b repeatedly - 1 record a time
         while (a.getFilePointer() < a.length()) {
-            byte[] data = new byte[BLOCK_SIZE];
+            byte[] data = new byte[RECORD_SIZE];
             a.read(data);
             b.write(data);
         }
     }
 
     // read multi blocks of records from multi runs [1, 8]
+    // return num of blocks (runs)
     public static int readMultiBlocks(RandomAccessFile runFile, List<RunInfo> runInfoList,
                                       Record[] heapRecords, int[] recordsEndIndices) throws IOException {
         // maintain index of run info list [1, 8]
@@ -102,7 +116,8 @@ public class IOHelper {
         }
     }
 
-    public static void sortAndOutput(RandomAccessFile file, MaxHeap<Record> maxHeap) throws IOException {
+    // sort heap and write to file
+    public static void sortAndWrite(RandomAccessFile file, MaxHeap<Record> maxHeap) throws IOException {
         // directly output from heap
         maxHeap.sort();
         Record[] records = maxHeap.getData();

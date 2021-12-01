@@ -14,21 +14,22 @@ import java.util.List;
 public class Operator {
 
     private RandomAccessFile file;
-    private RandomAccessFile mergeFile;
+    private long filePos;
+    private final int heapSize; // 65536
+    private final int blockSize; // 8192
+    private final int recordSize; // 16
 
     public Operator(RandomAccessFile file) {
         this.file = file;
+        this.heapSize = IOHelper.HEAP_SIZE;
+        this.blockSize = IOHelper.BLOCK_SIZE;
+        this.recordSize = IOHelper.RECORD_SIZE;
+        this.filePos = 0;
     }
 
-    public RandomAccessFile replacementSelection(List<RunInfo> runInfoList, MinHeap<Record> minHeap, int start) throws IOException {
+    public List<RunInfo> replacementSelection() throws IOException {
         RandomAccessFile runFile = new RandomAccessFile(IOHelper.RUN_FILE, "rw");
-
-        int blockSize = IOHelper.BLOCK_SIZE;
-        int recordSize = IOHelper.RECORD_SIZE;
-        int numOfRecord = blockSize / recordSize; // 512
-
-        Record[] inputBuffer;
-        Record[] outputBuffer = new Record[numOfRecord];
+        List<RunInfo> runInfoList = new ArrayList<>();
 
         int inputIdx = 0;
         int outputIdx = 0;
@@ -37,8 +38,17 @@ public class Operator {
         long runStart = 0;
         long runLength = 0;
 
-        // read 1 block (512) records from file to input buffer
-        inputBuffer = IOHelper.readRecords(file, start, numOfRecord);
+        int numOfRecord = blockSize / recordSize; // 512
+
+        Record[] inputBuffer;
+        Record[] outputBuffer = new Record[numOfRecord];
+
+        // read 8 blocks of records into heap
+        MinHeap<Record> minHeap = buildMinHeap();
+
+        // read 1 block of records into input buffer
+        inputBuffer = new Record[blockSize / recordSize];
+        filePos = IOHelper.readMultiRecords(file, filePos, inputBuffer);
 
         while (minHeap.heapSize() > 0) {
 
@@ -56,7 +66,7 @@ public class Operator {
                 // input buffer is empty
                 // read 1 block (512) records from file to input buffer
                 if (inputIdx == numOfRecord && file.getFilePointer() < file.length()) {
-                    inputBuffer = IOHelper.readRecords(file, file.getFilePointer(), numOfRecord);
+                    filePos = IOHelper.readMultiRecords(file, filePos, inputBuffer);
                     inputIdx = 0;
                 }
 
@@ -69,17 +79,15 @@ public class Operator {
                         minHeap.getData()[0] = inputBuffer[inputIdx++];
                         minHeap.sift(0);
                     } else {
-                        // reduce 1 size and swap with end
-                        if (!minHeap.empty()) {
-                            int currSize = minHeap.heapSize();
-                            currSize--;
-                            minHeap.setHeapSize(currSize);
-                            // swap
-                            Record temp = minHeap.getData()[currSize];
-                            minHeap.getData()[currSize] = minHeap.getData()[0];
+                        // reduce 1 size and swap with the last
+                        if (minHeap.heapSize() > 0) {
+                            minHeap.setHeapSize(minHeap.heapSize() - 1);
+                            // swap with last index
+                            Record temp = minHeap.getData()[minHeap.heapSize()];
+                            minHeap.getData()[minHeap.heapSize()] = minHeap.getData()[0];
                             minHeap.getData()[0] = temp;
                             // place to end as hidden one
-                            minHeap.getData()[currSize] = inputBuffer[inputIdx++];
+                            minHeap.getData()[minHeap.heapSize()] = inputBuffer[inputIdx++];
                             minHeap.sift(0);
                         }
                         hiddenNum++;
@@ -116,73 +124,50 @@ public class Operator {
             hiddenNum = 0;
         }
 
-        return runFile;
+        runFile.close();
+
+        return runInfoList;
     }
 
-    public void multiWayMerge(RandomAccessFile runFile, Record[] blocks, List<RunInfo> runInfoList) throws IOException {
-        mergeFile = new RandomAccessFile(IOHelper.MERGE_FILE, "rw");
-        List<RunInfo> mergeInfoList = runInfoList;
-
-        // only 1 run
-        if (runInfoList.size() == 1) {
-            mergeToFile(runFile, blocks, mergeInfoList);
-            IOHelper.copyToFile(mergeFile, file);
-
-            runFile.close();
-            mergeFile.close();
-
-            return;
+    private MinHeap<Record> buildMinHeap() throws IOException {
+        int numOfRecord = heapSize / recordSize; // 8 * 512
+        Record[] heapData = new Record[numOfRecord];
+        for (int i = 0; i < numOfRecord; i++) {
+            heapData[i] = IOHelper.readRecord(file, filePos);
+            filePos += recordSize;
         }
-
-        // many runs - swap files and run infos and merge
-        while (true) {
-            // only 1 run after merge
-            if (mergeInfoList.size() == 1) {
-                IOHelper.copyToFile(mergeFile, file);
-
-                runFile.close();
-                mergeFile.close();
-
-                break;
-            } else {
-                // swap run info with merge info
-                mergeInfoList = mergeToFile(runFile, blocks, mergeInfoList);
-                IOHelper.copyToFile(mergeFile, runFile);
-
-                runFile.seek(0);
-                mergeFile.seek(0);
-            }
-        }
+        return new MinHeap<>(heapData, numOfRecord, numOfRecord);
     }
 
-    private List<RunInfo> mergeToFile(RandomAccessFile runFile, Record[] heapRecords, List<RunInfo> runInfoList) throws IOException {
+    public void multiWayMerge(RandomAccessFile runFile, List<RunInfo> runInfoList) throws IOException {
+        RandomAccessFile mergeFile = new RandomAccessFile(IOHelper.MERGE_FILE, "rw");
         List<RunInfo> mergeInfoList = new ArrayList<>();
+        Record[] heapRecords = new Record[heapSize / recordSize];
 
-        int blockSize = IOHelper.BLOCK_SIZE;
-        int recordSize = IOHelper.RECORD_SIZE;
+        // create an output buffer
         int numOfRecord = blockSize / recordSize; // 512
+        Record[] outputBuffer = new Record[numOfRecord];
 
         // keep 8 block end index
         int[] recordsEndIndices = new int[8];
 
-        Record[] outputBuffer = new Record[numOfRecord];
         int outputIdx = 0;
         long runLength = 0;
         long runStart = 0;
 
         // traverse run info list
         while (runInfoList.size() > 0) {
+            // begin read
+            runFile.seek(0);
             // get run number [1, 8]
             int runNum = IOHelper.readMultiBlocks(runFile, runInfoList,
                     heapRecords, recordsEndIndices);
-            // maintain read done run number
-            int runDoneNum = 0;
             // index of minimum run
             int minRunIdx = 0;
-
+            // maintain read done run number
+            int runDoneNum = 0;
             // maintain 8 or less read done flags
             boolean[] runDone = new boolean[runNum];
-
             // init 8 or less indices for the 8-block-size run heap memory
             int[] recordIndices = new int[runNum];
             for (int i = 0; i < runNum; i++) {
@@ -207,12 +192,14 @@ public class Operator {
                     if (runDone[i]) continue;
 
                     Record curr = heapRecords[recordIndices[i]];
+                    // update min record
                     if (curr.compareTo(minRecord) < 0) {
                         minRunIdx = i;
                         minRecord = curr;
                     }
                 }
 
+                // output the min record
                 outputBuffer[outputIdx++] = minRecord;
 
                 // current block index reaching end
@@ -248,9 +235,23 @@ public class Operator {
             mergeInfoList.add(new RunInfo(runStart, runLength));
             runStart += runLength;
             runLength = 0;
-        }
 
-        return mergeInfoList;
+            // only 1 run after merge
+            if (runInfoList.size() == 0 && mergeInfoList.size() == 1) {
+                break;
+            }
+
+            // many runs after merge
+            if (runInfoList.size() == 0) {
+                // swap files and run infos and merge
+                List<RunInfo> temp = runInfoList;
+                runInfoList = mergeInfoList;
+                mergeInfoList = temp;
+                IOHelper.copyToFile(mergeFile, runFile);
+                // back to start
+                mergeFile.seek(0);
+            }
+        }
     }
 
     // set the key of current record to max
@@ -269,5 +270,4 @@ public class Operator {
 
         return new Record(bb.array());
     }
-
 }
