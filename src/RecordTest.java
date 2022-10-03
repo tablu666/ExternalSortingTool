@@ -15,6 +15,9 @@ public class RecordTest extends TestCase {
     private byte[] data;
 
     @Override
+    /**
+     * setUp
+     */
     protected void setUp() throws Exception {
         ByteBuffer bb = ByteBuffer.allocate(16);
         bb.putLong(0, 0);
@@ -24,18 +27,30 @@ public class RecordTest extends TestCase {
         this.record = new Record(data);
     }
 
+    /**
+     * test getId
+     */
     public void testGetId() {
         assertEquals(0, record.getId());
     }
 
+    /**
+     * test getKey
+     */
     public void testGetKey() {
         assertEquals(0, Double.compare(0.0, record.getKey()));
     }
 
+    /**
+     * test getData
+     */
     public void testGetData() {
         assertEquals(data, record.getData());
     }
 
+    /**
+     * test compareTo
+     */
     public void testCompareTo() {
         ByteBuffer bb = ByteBuffer.allocate(16);
         bb.putLong(0, 0);
@@ -45,6 +60,9 @@ public class RecordTest extends TestCase {
         assertTrue(r.compareTo(record) > 0);
     }
 
+    /**
+     * test toString
+     */
     public void testToString() {
         assertEquals("0 0.0", record.toString());
     }

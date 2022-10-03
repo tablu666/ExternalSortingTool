@@ -1,4 +1,4 @@
-import java.lang.Comparable;
+//import java.lang.Comparable;
 
 /**
  * This class implements the min heap structure
@@ -11,6 +11,7 @@ import java.lang.Comparable;
  *
  * @author Tianbo Lu & Yuechen Feng
  * @version 2021-11-14
+ * @param <T> data type
  */
 public class MinHeap<T extends Comparable<? super T>> {
     private T[] data;   // Pointer to the heap array
@@ -32,25 +33,34 @@ public class MinHeap<T extends Comparable<? super T>> {
     }
 
     /**
-     * Return current size of the heap
+     * heapSize
+     * @return the heapSize
      */
     public int heapSize() {
         return n;
     }
 
-    public void setHeapSize(int n) {
-        this.n = n;
+    /**
+     * set the heap size
+     * @param num int
+     */
+    public void setHeapSize(int num) {
+        this.n = num;
     }
 
     /**
-     * Is pos a leaf position?
+     *
+     * @param pos position
+     * @return boolean
      */
     public boolean isLeaf(int pos) {
         return (pos >= n / 2) && (pos < n);
     }
 
     /**
-     * Return position for left child of pos
+     * leftChild
+     * @param pos the position
+     * @return the left child
      */
     public int leftChild(int pos) {
         assert pos < n / 2 : "Position has no left child";
@@ -58,14 +68,22 @@ public class MinHeap<T extends Comparable<? super T>> {
     }
 
     /**
-     * Heapify contents of Heap
+     * Heapify the content
      */
     public void buildHeap() {
-        for (int i = n / 2 - 1; i >= 0; i--) sift(i);
+        for (int i = n / 2 - 1; i >= 0; i--) {
+            sift(i);
+        }
     }
 
+    /**
+     * removeMin
+     * @return return type
+     */
     public T removeMin() {     // Remove minimum value
-        if (n < 1) return null;
+        if (n < 1) {
+            return null;
+        }
 
         // swap
         n--;
@@ -73,11 +91,17 @@ public class MinHeap<T extends Comparable<? super T>> {
         data[n] = data[0];
         data[0] = temp;
 
-        if (n != 0) sift(0);
+        if (n != 0) {
+            sift(0);
+        }
 
         return data[n];
     }
 
+    /**
+     * sift
+     * @param pos the position
+     */
     public void sift(int pos) {
         if (pos >= 0 && pos < n) { // legal heap position
             while (!isLeaf(pos)) {
@@ -96,10 +120,26 @@ public class MinHeap<T extends Comparable<? super T>> {
         }
     }
 
+    /**
+     * empty
+     * @return return boolean
+     */
+    public boolean empty() {
+        return n == 0;
+    }
+
+    /**
+     * capacity
+     * @return the size
+     */
     public int capacity() {
         return this.size;
     }
 
+    /**
+     * getData
+     * @return the data
+     */
     public T[] getData() {
         return data;
     }

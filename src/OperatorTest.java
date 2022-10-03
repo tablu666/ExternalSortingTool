@@ -1,8 +1,11 @@
 import student.TestCase;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 /**
  * The purpose of this class is to test
@@ -15,59 +18,101 @@ public class OperatorTest extends TestCase {
 
     private Operator opr;
     private RandomAccessFile file;
-    private String runFileName;
+    private int heapSize = 65536;
+    private MinHeap<Record> minHeap;
+    private List<RunInfo> runInfoList;
 
     @Override
+    /**
+     * setup
+     */
     public void setUp() throws Exception {
+        Files.deleteIfExists(Paths.get("opr.bin"));
         String[] input = {"opr.bin", "9"};
-        reversed(input);
+        random(input);
         this.file = new RandomAccessFile("opr.bin", "rw");
         this.opr = new Operator(file);
-        this.runFileName = IOHelper.RUN_FILE;
+
+        int recordSize = 16;
+        int numOfRecord = heapSize / recordSize;
+        Record[] records =
+                IOHelper.readRecords(file, 0, numOfRecord);
+        this.minHeap = new MinHeap<>(records, numOfRecord, numOfRecord);
+        this.runInfoList = new ArrayList<>();
     }
 
     @Override
+    /**
+     * setup
+     */
     public void tearDown() throws Exception {
         this.file.close();
     }
 
+    /**
+     * test Replacement Selection
+     */
     public void testReplacementSelection() {
         try {
-            List<RunInfo> runInfoList = opr.replacementSelection();
-            assertTrue(runInfoList.size() > 0);
-        } catch (IOException e) {
+            RandomAccessFile runFile =
+                    opr.replacementSelection(
+                            runInfoList,
+                            minHeap,
+                            heapSize);
+            assertTrue(runFile.length() > 0);
+        }
+        catch (IOException e) {
             e.printStackTrace();
         }
     }
 
+    /**
+     * test MultiWayMerge
+     */
     public void testMultiWayMerge() {
         try {
-            List<RunInfo> runInfoList = opr.replacementSelection();
-            RandomAccessFile runFile = new RandomAccessFile(runFileName, "rw");
-            opr.multiWayMerge(runFile, runInfoList);
+            RandomAccessFile runFile =
+                    opr.replacementSelection(
+                            runInfoList,
+                            minHeap,
+                            heapSize);
+            opr.multiWayMerge(runFile, minHeap.getData(), runInfoList);
             assertTrue(file.getFilePointer() > 0);
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    private void reversed(String[] args) throws IOException {
+    /**
+     * Creates a bin file with random values
+     *
+     * @param args
+     *            string array of arguments
+     * @throws IOException
+     */
+    public static void random(String[] args) throws IOException {
         long val;
         double val2;
-        int filesize = Integer.parseInt(args[1]); // Size of file in blocks
-        DataOutputStream file = new DataOutputStream(new BufferedOutputStream(
-                new FileOutputStream(args[0])));
-        // For sorted.
-
-        for (int i = filesize - 1; i >= 0; i--) {
-            for (int j = 512 - 1; j >= 0; j--) {
-                val = (long)(i * 512 + j);
-                file.writeLong(val);
-                val2 = (double)(i * 512 + j);
-                file.writeDouble(val2);
-            }
+        Random value = new Random();
+        if (args.length != 2) {
+            System.out.println("");
         }
-        file.flush();
-        file.close();
+        else {
+            int filesize = Integer.parseInt(args[1]);
+            DataOutputStream file = new DataOutputStream(
+                    new BufferedOutputStream(new FileOutputStream(args[0])));
+            for (int i = 0; i < filesize; i++) {
+                for (int j = 0; j < 512; j++) {
+                    val = (long)(value.nextLong());
+                    file.writeLong(val);
+                    val2 = (double)(value.nextDouble());
+                    file.writeDouble(val2);
+                }
+            }
+            file.flush();
+            file.close();
+        }
     }
+
 }

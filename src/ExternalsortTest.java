@@ -1,6 +1,8 @@
 import student.TestCase;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 /**
  * The purpose of this class is to test
@@ -11,19 +13,36 @@ import java.io.*;
  */
 public class ExternalsortTest extends TestCase {
 
+    /**
+     * the function to test main()
+     */
     public void testMain() {
         try {
-            String[] input = {"extest.bin", "1"};
+            Files.deleteIfExists(Paths.get("extest.bin"));
+            Files.deleteIfExists(Paths.get("extest1.bin"));
+            String[] input = {"extest.bin", "8"};
+            String[] input2 = {"extest1.bin", "24"};
             reversed(input);
+            reversed(input2);
             RandomAccessFile file = new RandomAccessFile("extest.bin", "rw");
+            RandomAccessFile file1 = new RandomAccessFile("extest1.bin", "rw");
             Externalsort.main(input);
             assertTrue(systemOut().getHistory().contains("0.0"));
+            Externalsort.main(input2);
+            assertTrue(file1.length() > 0);
             file.close();
-        } catch (IOException e) {
+            file1.close();
+        }
+        catch (IOException e) {
             assertTrue(e instanceof FileNotFoundException);
         }
     }
 
+    /**
+     *
+     * @param args string
+     * @throws IOException
+     */
     private void reversed(String[] args) throws IOException {
         long val;
         double val2;
@@ -34,9 +53,9 @@ public class ExternalsortTest extends TestCase {
 
         for (int i = filesize - 1; i >= 0; i--) {
             for (int j = 512 - 1; j >= 0; j--) {
-                val = (long)(i * 512 + j);
+                val = (long) (i * 512 + j);
                 file.writeLong(val);
-                val2 = (double)(i * 512 + j);
+                val2 = (double) (i * 512 + j);
                 file.writeDouble(val2);
             }
         }

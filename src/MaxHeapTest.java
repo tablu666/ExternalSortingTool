@@ -11,9 +11,15 @@ import java.util.Arrays;
  */
 public class MaxHeapTest extends TestCase {
 
+    /**
+     * Initialize
+     */
     private MaxHeap<Integer> maxHeap;
 
     @Override
+    /**
+     * setup
+     */
     protected void setUp() throws Exception {
         Integer[] data = new Integer[5];
         for (int i = 0; i < 5; i++) {
@@ -22,12 +28,22 @@ public class MaxHeapTest extends TestCase {
         this.maxHeap = new MaxHeap<>(data);
     }
 
+    /**
+     * testSort
+     */
     public void testSort() {
         maxHeap.sort();
-        assertTrue(maxHeap.getData()[0] == 1);
+        assertEquals(java.util.Optional.ofNullable(
+                maxHeap.getData()[0]),
+                java.util.Optional.ofNullable(1));
     }
 
+    /**
+     * test get data
+     */
     public void testGetData() {
-        assertEquals("[5, 4, 3, 2, 1]", Arrays.toString(maxHeap.getData()));
+        assertEquals(
+                "[5, 4, 3, 2, 1]",
+                Arrays.toString(maxHeap.getData()));
     }
 }
