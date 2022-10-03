@@ -33,7 +33,7 @@ To process the data, read the first 8 blocks of the input file into working memo
 Multi-way merging uses the **8 blocks of memory** used for the heap in the run-building step to store working data from the runs during the merge step. Multi-way merging is done by reading the first block from each of the runs currently being merged into your working area, and merging these runs into the one block output buffer. When the output buffer fills up, it is written to the output file. Whenever one of the input blocks is exhausted, read in the next block for that particular run. This step requires random access (using `seek()`) to the run file, and a sequential write of the output file. Depending on the size of all records, it may need **multiple passes** of multiway-merging to sort the whole file.
 
 ## Classes
-1. `Externalsort` is then name of the program. It contains the main method (the entry point of the application).
+1. `Externalsort` contains the main method (the entry point of the application).
 2. `GenFile` will generate input files with randomized data for you to use in your testing.
 3. `IOHelper` provides useful binary data read and write methods.
 4. `MaxHeap` is used when the size of the input file is less than 8 blocks long.
